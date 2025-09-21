@@ -9,8 +9,8 @@
 		"build": "tsup && tsc-alias",
 		"build:win": "bun build --compile --target=bun-windows-x64 ./src/index.ts --outfile ./binaries/foxy.exe",
 		"build:linux": "bun build --compile --target=bun-linux-x64 ./src/index.ts --outfile ./binaries/foxy",
-		"build:mac": "bun build --compile --target=bun-macos-x64 ./src/index.ts --outfile ./binaries/foxy",
-		"build:mac:arm64": "bun build --compile --target=bun-macos-arm64 ./src/index.ts --outfile ./binaries/foxy"
+		"build:mac": "bun build --compile --target=bun-macos-x64 ./src/index.ts --outfile ./binaries/fox-mac",
+		"build:mac:arm64": "bun build --compile --target=bun-macos-arm64 ./src/index.ts --outfile ./binaries/foxy-mac64"
 	},
 	"author": "Noa",
 	"bin": {

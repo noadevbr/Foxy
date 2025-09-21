@@ -1,0 +1,14 @@
+node_modules
+src
+cursor.md
+.nvmrc
+biome.json
+.gitignore
+.git
+.github
+.vscode
+.editorconfig
+.prettierrc
+tsup.config.ts
+tsconfig.json
+.env

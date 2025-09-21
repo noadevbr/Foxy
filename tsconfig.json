@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", // Suporte moderno
+    "module": "NodeNext", // Para importar pacotes do Node
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node"], // Tipos do Node.js
+    "outDir": "dist", // Saída dos arquivos compilados
+    "rootDir": "src", // Código-fonte principal
+    "strict": true, // Boa prática: modo estrito
+    "esModuleInterop": true, // Importações compatíveis
+    "forceConsistentCasingInFileNames": true, // Evita bugs em sistemas case-sensitive
+    "baseUrl": "./src",
+    "paths": {
+      "@gemini": ["./lib/gemini-agent/GGClient.ts"],
+      "@fx": ["./functions/exporteds.ts"],
+      "@utils/*": ["./utils/*"],
+      "@/*": ["./*"]
+    },
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

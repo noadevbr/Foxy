@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Foxy Config Schema",
+  "description": "Schema para validação do arquivo de configuração .foxycfg",
+  "type": "object",
+  "properties": {
+    "language": {
+      "type": "string",
+      "enum": ["pt", "en"],
+      "description": "Idioma da CLI: português (pt) ou inglês (en)."
+    },
+    "conventionalCommits": {
+      "type": "boolean",
+      "description": "Se true, usa estilo de commits convencionais."
+    },
+    "commitStyle": {
+      "type": "string",
+      "enum": ["conventional", "simple", "detailed"],
+      "description": "Estilo de commit a ser usado."
+    },
+    "maxMessageLength": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Número máximo de caracteres permitidos na mensagem de commit."
+    },
+    "includeScope": {
+      "type": "boolean",
+      "description": "Se true, inclui escopo nos commits."
+    },
+    "includeBreakingChanges": {
+      "type": "boolean",
+      "description": "Se true, inclui breaking changes nos commits."
+    },
+    "emojis": {
+      "type": "boolean",
+      "description": "Se true, adiciona emojis nos commits."
+    },
+    "git": {
+      "type": "object",
+      "description": "Configurações relacionadas ao Git",
+      "properties": {
+        "autoAdd": {
+          "type": "boolean",
+          "description": "Se true, adiciona automaticamente arquivos ao commit."
+        },
+        "confirmBeforeCommit": {
+          "type": "boolean",
+          "description": "Se true, pergunta antes de realizar o commit."
+        },
+        "includeStats": {
+          "type": "boolean",
+          "description": "Se true, inclui estatísticas no commit."
+        },
+        "autoCommit": {
+          "type": "boolean",
+          "description": "Se true, realiza o commit automaticamente sem confirmação."
+        }
+      },
+      "required": ["autoAdd", "confirmBeforeCommit", "includeStats", "autoCommit"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "language",
+    "conventionalCommits",
+    "commitStyle",
+    "maxMessageLength",
+    "includeScope",
+    "includeBreakingChanges",
+    "emojis",
+    "git"
+  ],
+  "additionalProperties": false
+}

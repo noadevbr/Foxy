@@ -1,19 +1,30 @@
-// index.ts (CLI principal)
+// index.ts (CLI principal estilizada)
 import { Command } from 'commander';
 import { FoxyClient } from './util/FoxyClient.js';
 import { TrasformeToFile } from '@fx';
-import { execSync } from 'child_process';
-import { existsSync } from 'fs';
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { FoxyConfigManager } from './util/config/FoxyConfig.js';
 import { CommitMessageGenerator } from './util/CommitMessageGenerator.js';
+import chalk from 'chalk';
 
 const FoxyCL = new FoxyClient();
-
 const CLI = new Command();
+
+// 🎨 helpers visuais
+const fox = chalk.hex('#ff8800')('🦊');
+const ok = chalk.green('✅');
+const err = chalk.red('❌');
+const info = chalk.cyan('💡');
+const gear = chalk.yellow('⚙️');
+const commit = chalk.magenta('💾');
+const sparkle = chalk.hex('#ff66cc')('✨');
 
 CLI.name('foxy')
   .description(
-    'Uma inteligência artificial para ajudar o PedroDev quando ele não souber o que fazer.',
+    chalk.bold.hex('#ffa500')(
+      'Uma inteligência artificial para ajudar não souber o que fazer.',
+    ),
   )
   .option('--git [action]', 'Detecta mudanças no git e cria commit automático. Use "init" para configurar.')
   .option('--reset-key', 'Remove a API key salva e força uma nova configuração')
@@ -23,19 +34,17 @@ CLI.name('foxy')
     const baseDir = process.cwd();
 
     try {
-      // Opção para resetar API key
       if (options.resetKey) {
+        console.log(`${gear} ${chalk.yellow('Resetando API key...')}`);
         await FoxyCL.resetApiKey();
         return;
       }
 
-      // Opção para forçar setup
       if (options.setup) {
+        console.log(`${gear} ${chalk.yellow('Forçando nova configuração...')}\n`);
         await FoxyCL.resetApiKey();
-        console.log('🔧 | Forçando nova configuração...\n');
       }
 
-      // Se a opção --git foi usada
       if (options.git) {
         if (options.git === 'init') {
           await handleGitInit(baseDir);
@@ -46,24 +55,23 @@ CLI.name('foxy')
       }
 
       if (!pergunta.length) {
-        // Verifica se está configurado para mostrar mensagem apropriada
         if (FoxyCL.isConfigured()) {
-          console.log('Oi, PedroDev! Como posso te ajudar hoje? 🦊');
+          const username = process.env.USER || process.env.LOGNAME || process.env.USERNAME;
+          console.log(`${fox} ${chalk.greenBright(`Oi, ${username}! Como posso te ajudar hoje?`)}`);
         } else {
-          console.log('🦊 | Olá! Parece que é sua primeira vez usando o Foxy.');
-          console.log('💡 | Use qualquer comando para começar a configuração!');
+          console.log(`${fox} ${chalk.yellow('Olá! Parece que é sua primeira vez usando o Foxy.')}`);
+          console.log(`${info} Use qualquer comando para começar a configuração!`);
         }
       } else {
         const perguntaCompleta = pergunta.join(' ');
-
-        console.log(`🔍 | Você perguntou: "${perguntaCompleta}"`);
-        console.log('🦊 | Foxy está pensando...');
+        console.log(`${sparkle} ${chalk.cyan('Você perguntou:')} "${chalk.bold(perguntaCompleta)}"`);
+        console.log(`${fox} ${chalk.gray('Foxy está pensando...')}`);
 
         const { responded, date } = await FoxyCL.responder(perguntaCompleta);
         const resposta = await responded;
 
-        console.log(`📅 | ${date.toLocaleString()}`);
-        console.log(`💬 | ${resposta}`);
+        console.log(`${chalk.dim('📅')} ${chalk.gray(date.toLocaleString())}`);
+        console.log(`${chalk.bold('💬')} ${chalk.white(resposta)}`);
 
         if (resposta.includes('---')) {
           await TrasformeToFile(resposta, baseDir);
@@ -73,123 +81,106 @@ CLI.name('foxy')
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes('API key')) {
-          console.error('❌ | Erro com a API key:', error.message);
-          console.log('💡 | Tente: foxy --reset-key');
+          console.error(`${err} ${chalk.red('Erro com a API key:')} ${error.message}`);
+          console.log(`${info} Tente: ${chalk.cyan('foxy --reset-key')}`);
         } else {
-          console.error('❌ | Erro:', error.message);
+          console.error(`${err} ${chalk.red('Erro:')} ${error.message}`);
         }
       } else {
-        console.error('❌ | Erro desconhecido:', error);
+        console.error(`${err} ${chalk.red('Erro desconhecido:')} ${error}`);
       }
       process.exit(1);
     }
   });
 
 async function handleGitInit(baseDir: string) {
-  console.log('🦊 | Inicializando configuração do Foxy...');
+  console.log(`${fox} ${chalk.hex('#ffa500')('Inicializando configuração do Foxy...')}`);
   
   const configManager = new FoxyConfigManager(baseDir);
   configManager.createDefaultConfig();
   
-  console.log('📋 | Configurações disponíveis no .foxycfg:');
-  console.log('   • language: pt | en');
-  console.log('   • conventionalCommits: true | false');
-  console.log('   • commitStyle: conventional | simple | detailed');
-  console.log('   • maxMessageLength: número');
-  console.log('   • includeScope: true | false');
-  console.log('   • emojis: true | false');
-  console.log('   • git.autoAdd: true | false');
-  console.log('   • git.autoCommit: true | false (NOVO!)');
-  console.log('   • git.confirmBeforeCommit: true | false');
-  console.log('   • git.includeStats: true | false');
-  console.log('');
-  console.log('💡 | Edite o arquivo .foxycfg para personalizar as configurações!');
+  console.log(chalk.cyan('\n📋 | Configurações disponíveis no .foxycfg:'));
+  console.log(chalk.gray(`
+   • language: ${chalk.yellow('pt | en')}
+   • conventionalCommits: ${chalk.yellow('true | false')}
+   • commitStyle: ${chalk.yellow('conventional | simple | detailed')}
+   • maxMessageLength: ${chalk.yellow('número')}
+   • includeScope: ${chalk.yellow('true | false')}
+   • emojis: ${chalk.yellow('true | false')}
+   • git.autoAdd: ${chalk.yellow('true | false')}
+   • git.autoCommit: ${chalk.yellow('true | false')}
+   • git.confirmBeforeCommit: ${chalk.yellow('true | false')}
+   • git.includeStats: ${chalk.yellow('true | false')}
+  `));
+
+  console.log(`${info} Edite o arquivo ${chalk.magenta('.foxycfg')} para personalizar as configurações!\n`);
 }
 
 async function handleGitCommit(baseDir: string) {
-  console.log('🦊 | Foxy está analisando as mudanças no git...');
+  console.log(`${fox} ${chalk.hex('#ff8800')('Analisando mudanças no git...')}`);
   
-  // Verifica se estamos em um repositório git
   if (!existsSync(`${baseDir}/.git`)) {
-    console.log('❌ | Este diretório não é um repositório git!');
+    console.log(`${err} ${chalk.red('Este diretório não é um repositório git!')}`);
     return;
   }
 
-  // Carrega configurações
   const configManager = new FoxyConfigManager(baseDir);
   const config = configManager.loadConfig();
 
   try {
-    // Obtém o status do git
-    const gitStatus = execSync('git status --porcelain', { 
-      encoding: 'utf8',
-      cwd: baseDir 
-    }).trim();
+    const gitStatus = execSync('git status --porcelain', { encoding: 'utf8', cwd: baseDir }).trim();
 
     if (!gitStatus) {
-      console.log('✅ | Não há mudanças para commitar!');
+      console.log(`${ok} ${chalk.green('Não há mudanças para commitar!')}`);
       return;
     }
 
-    // Analisa as mudanças
     const changes = parseGitStatus(gitStatus);
     
     if (config.git.includeStats) {
-      console.log('📊 | Mudanças detectadas:');
-      console.log(`   • ${changes.added.length} arquivo(s) adicionado(s)`);
-      console.log(`   • ${changes.modified.length} arquivo(s) modificado(s)`);
-      console.log(`   • ${changes.deleted.length} arquivo(s) deletado(s)`);
+      console.log(chalk.cyan('\n📊 | Mudanças detectadas:'));
+      console.log(`   • ${chalk.green(changes.added.length)} arquivo(s) adicionado(s)`);
+      console.log(`   • ${chalk.yellow(changes.modified.length)} arquivo(s) modificado(s)`);
+      console.log(`   • ${chalk.red(changes.deleted.length)} arquivo(s) deletado(s)\n`);
     }
 
-    // Gera descrição do commit usando IA
-    console.log('🤖 | Gerando descrição do commit...');
+    console.log(`${sparkle} ${chalk.magenta('Gerando descrição do commit...')}`);
     const messageGenerator = new CommitMessageGenerator(FoxyCL, config);
     const commitMessage = await messageGenerator.generateCommitMessage(changes);
     
-    console.log(`💬 | Mensagem do commit: "${commitMessage}"`);
+    console.log(`${commit} ${chalk.white('Mensagem do commit:')} ${chalk.greenBright(`"${commitMessage}"`)}`);
 
-    // Executa git add . (se habilitado)
     if (config.git.autoAdd) {
-      console.log('📝 | Adicionando arquivos ao staging...');
+      console.log(`${gear} ${chalk.yellow('Adicionando arquivos ao staging...')}`);
       execSync('git add .', { cwd: baseDir });
     }
 
-    // Verifica se deve fazer commit automaticamente
     if (config.git.autoCommit) {
-      // Faz o commit automaticamente
-      console.log('💾 | Criando commit...');
+      console.log(`${commit} ${chalk.yellow('Criando commit...')}`);
       execSync(`git commit -m "${commitMessage}"`, { cwd: baseDir });
-      console.log('✅ | Commit criado com sucesso!');
+      console.log(`${ok} ${chalk.green('Commit criado com sucesso!')}`);
     } else {
-      // Apenas mostra a mensagem e instruções
-      console.log('📋 | Commit não foi criado automaticamente.');
+      console.log(`${info} Commit não foi criado automaticamente.`);
     }
 
   } catch (error) {
-    console.error('❌ | Erro ao processar commit:', error);
+    console.error(`${err} ${chalk.red('Erro ao processar commit:')} ${error}`);
   }
 }
 
 function parseGitStatus(status: string) {
   const lines = status.split('\n').filter(line => line.trim());
-  
   const added: string[] = [];
   const modified: string[] = [];
   const deleted: string[] = [];
 
   for (const line of lines) {
-    const status = line.substring(0, 2);
+    const state = line.substring(0, 2);
     const file = line.substring(3);
 
-    if (status.includes('A')) {
-      added.push(file);
-    }
-    if (status.includes('M')) {
-      modified.push(file);
-    }
-    if (status.includes('D')) {
-      deleted.push(file);
-    }
+    if (state.includes('A')) added.push(file);
+    if (state.includes('M')) modified.push(file);
+    if (state.includes('D')) deleted.push(file);
   }
 
   return { added, modified, deleted };

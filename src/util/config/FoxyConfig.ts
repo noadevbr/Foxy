@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 export interface FoxyConfig {
 	language: 'pt' | 'en';
@@ -15,6 +15,7 @@ export interface FoxyConfig {
 		includeStats: boolean;
 		autoCommit: boolean;
 	};
+		analyticFiles: boolean;
 }
 
 export const DEFAULT_CONFIG: FoxyConfig = {
@@ -31,6 +32,7 @@ export const DEFAULT_CONFIG: FoxyConfig = {
 		includeStats: true,
 		autoCommit: false,
 	},
+		analyticFiles: false
 };
 
 export class FoxyConfigManager {

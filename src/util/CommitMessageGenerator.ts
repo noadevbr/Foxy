@@ -1,5 +1,7 @@
-import { FoxyClient } from './FoxyClient.js';
-import { FoxyConfig } from './config/FoxyConfig.js';
+import type { FoxyClient } from './FoxyClient.js';
+import type { FoxyConfig } from './config/FoxyConfig.js';
+import { readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
 
 export interface GitChanges {
 	added: string[];
@@ -18,12 +20,19 @@ export class CommitMessageGenerator {
 
 	async generateCommitMessage(changes: GitChanges): Promise<string> {
 		const changeSummary = this.buildChangeSummary(changes);
-		
-		if (this.config.conventionalCommits) {
-			return await this.generateConventionalCommit(changes, changeSummary);
-		} else {
-			return await this.generateSimpleCommit(changes, changeSummary);
+		let fileAnalysis = "";
+
+		if (this.config.analyticFiles) {
+			console.log("🧩 | Analisando conteúdo dos arquivos modificados...");
+			fileAnalysis = await this.analyzeModifiedFiles(changes);
 		}
+
+		const enhancedSummary = `${changeSummary}${fileAnalysis}`;
+
+		if (this.config.conventionalCommits) {
+			return await this.generateConventionalCommit(changes, enhancedSummary);
+		}
+		return await this.generateSimpleCommit(changes, enhancedSummary);
 	}
 
 	private buildChangeSummary(changes: GitChanges): string {
@@ -50,12 +59,39 @@ export class CommitMessageGenerator {
 		return summary.join('\n');
 	}
 
+	private async analyzeModifiedFiles(changes: GitChanges): Promise<string> {
+		const maxFiles = 5; // limite de arquivos analisados
+		const modified = changes.modified.slice(0, maxFiles);
+		if (modified.length === 0) return '';
+
+		let analysis = '\n\n📄 Conteúdo dos arquivos modificados:\n';
+
+		for (const file of modified) {
+			try {
+				const filePath = path.resolve(process.cwd(), file);
+				const fileStat = await stat(filePath);
+
+				// Ignora arquivos muito grandes (> 100 KB)
+				if (fileStat.size > 100 * 1024) {
+					analysis += `\n--- ${file} ---\n(arquivo ignorado: muito grande - ${Math.round(fileStat.size / 1024)} KB)\n`;
+					continue;
+				}
+
+				const content = await readFile(filePath, "utf8");
+				analysis += `\n--- ${file} ---\n${content.slice(0, 800)}\n`;
+			} catch {
+				analysis += `\n--- ${file} ---\n(erro ao ler conteúdo)\n`;
+			}
+		}
+
+		return analysis;
+	}
+
 	private async generateConventionalCommit(changes: GitChanges, changeSummary: string): Promise<string> {
 		const language = this.config.language === 'pt' ? 'português brasileiro' : 'english';
 		const emojiInstruction = this.config.emojis ? 
 			'- Inclua emoji no início da mensagem (ex: ✨ feat: nova funcionalidade)' : 
 			'- NÃO inclua emojis na mensagem';
-		
 		
 		const prompt = `Analise as seguintes mudanças no código e gere uma mensagem de commit seguindo Conventional Commits:
 
@@ -90,9 +126,8 @@ Responda apenas com a mensagem do commit:`;
 		try {
 			const { responded } = await this.foxyClient.responder(prompt);
 			const message = await responded;
-			
 			return this.cleanMessage(message);
-		} catch (error) {
+		} catch {
 			return this.getFallbackMessage(changes);
 		}
 	}
@@ -116,9 +151,8 @@ Responda apenas com a mensagem do commit:`;
 		try {
 			const { responded } = await this.foxyClient.responder(prompt);
 			const message = await responded;
-			
 			return this.cleanMessage(message);
-		} catch (error) {
+		} catch {
 			return this.getFallbackMessage(changes);
 		}
 	}
@@ -138,45 +172,24 @@ Responda apenas com a mensagem do commit:`;
 		if (this.config.conventionalCommits) {
 			if (changes.added.length > changes.modified.length) {
 				return `${emoji}feat: adiciona ${totalChanges} arquivo(s)`;
-			} else if (changes.modified.length > 0) {
-				return `${emoji}fix: atualiza ${totalChanges} arquivo(s)`;
-			} else {
-				return `${emoji}chore: atualiza ${totalChanges} arquivo(s)`;
 			}
-		} else {
-			return `${emoji}Atualiza ${totalChanges} arquivo(s)`;
+			if (changes.modified.length > 0) {
+				return `${emoji}fix: atualiza ${totalChanges} arquivo(s)`;
+			}
+			return `${emoji}chore: atualiza ${totalChanges} arquivo(s)`;
 		}
+		return `${emoji}Atualiza ${totalChanges} arquivo(s)`;
 	}
 
 	detectCommitType(changes: GitChanges): string {
-		// Lógica para detectar o tipo de commit baseado nos arquivos
 		const allFiles = [...changes.added, ...changes.modified, ...changes.deleted];
 		
-		// Detecção baseada em padrões de arquivos
-		if (allFiles.some(f => f.includes('test') || f.includes('spec'))) {
-			return 'test';
-		}
-		
-		if (allFiles.some(f => f.includes('docs') || f.includes('README') || f.includes('.md'))) {
-			return 'docs';
-		}
-		
-		if (allFiles.some(f => f.includes('style') || f.includes('css') || f.includes('scss'))) {
-			return 'style';
-		}
-		
-		if (allFiles.some(f => f.includes('config') || f.includes('package.json') || f.includes('tsconfig'))) {
-			return 'chore';
-		}
-		
-		if (changes.added.length > changes.modified.length) {
-			return 'feat';
-		}
-		
-		if (changes.modified.length > 0) {
-			return 'fix';
-		}
-		
+		if (allFiles.some(f => f.includes('test') || f.includes('spec'))) return 'test';
+		if (allFiles.some(f => f.includes('docs') || f.includes('README') || f.includes('.md'))) return 'docs';
+		if (allFiles.some(f => f.includes('style') || f.includes('css') || f.includes('scss'))) return 'style';
+		if (allFiles.some(f => f.includes('config') || f.includes('package.json') || f.includes('tsconfig'))) return 'chore';
+		if (changes.added.length > changes.modified.length) return 'feat';
+		if (changes.modified.length > 0) return 'fix';
 		return 'chore';
 	}
 }

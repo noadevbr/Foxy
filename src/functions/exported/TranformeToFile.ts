@@ -1,129 +1,109 @@
+// src/util/TrasformeToFile.ts
 import fs from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
-import inquirer from 'inquirer'; // Para a interface interativa
-import readline from 'node:readline';
+import inquirer from 'inquirer';
+import ora from 'ora'; // spinner bonitinho
 
-// Função para perguntar ao usuário (como no original)
-function askUser(question: string): Promise<string> {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-
-	return new Promise((resolve) => {
-		rl.question(question, (answer) => {
-			rl.close();
-			resolve(answer.toLowerCase().trim());
-		});
-	});
-}
-
-// Função para exibir o conteúdo com cores (simulando um preview de código)
-function displayContent(content: string) {
-	console.log(chalk.greenBright('Conteúdo do arquivo:\n'));
-	console.log(chalk.cyan(content));
-}
-
-export async function TrasformeToFile(
-	script: string,
-	baseDir: string = process.cwd(),
-) {
-	// Ajustando o regex para capturar o caminho do arquivo e o conteúdo corretamente
-	const fileBlocks = [...script.matchAll(/---\n`(.*?)\n([\s\S]+?)`\n---/g)];
+export async function TrasformeToFile(script: string, baseDir = process.cwd()) {
+	// Novo regex pro formato "--- FILE: caminho" até "--- END FILE"
+	const fileBlocks = [
+		...script.matchAll(/--- FILE:\s*(.+?)\n([\s\S]*?)--- END FILE/g),
+	];
 
 	if (!fileBlocks.length) {
-		console.log('⚠️ | Nenhum bloco de arquivo válido encontrado.');
+		console.log(chalk.yellow('⚠️  Nenhum bloco de arquivo válido encontrado.'));
 		return;
 	}
 
-	// Lista de arquivos identificados
-	const identifiedFiles = fileBlocks.map(([, relativePath, content]) => {
-		return {
-			filePath: path.resolve(baseDir, relativePath.trim()),
-			content: content.trim(),
-			name: relativePath.trim(),
-		};
-	});
-
-	// Mensagem de que a Foxy gerou arquivos
-	console.log(chalk.cyan('Foxy gerou os seguintes arquivos:\n'));
-
-	// Pergunta para salvar os arquivos
-	const filesToSave = await askFileSelection(identifiedFiles);
-
-	// Pergunta final sobre salvar os arquivos
-	for (const file of filesToSave) {
-		await handleFileCreation(file);
-	}
-}
-
-// Função para perguntar ao usuário sobre os arquivos que ele deseja salvar
-async function askFileSelection(
-	files: { filePath: string; content: string; name: string }[],
-) {
-	// Mostra a lista de arquivos com checkboxes
-	const filesWithCheckbox = files.map((file, idx) => ({
-		...file,
-		selected: false,
-		idx: idx + 1,
+	const files = fileBlocks.map(([, relativePath, content]) => ({
+		name: relativePath.trim(),
+		filePath: path.resolve(baseDir, relativePath.trim()),
+		content: content.trim(),
 	}));
 
-	// Cria uma pergunta interativa para o usuário escolher os arquivos
-	const responses = await inquirer.prompt([
+	console.log(chalk.cyan('\n🦊 | Foxy detectou os seguintes arquivos para criação:\n'));
+	files.forEach((f, i) => {
+		console.log(`  ${chalk.magenta(`${i + 1}.`)}) ${chalk.cyan(f.name)}`);
+	});
+
+	console.log('');
+
+	// Interface interativa
+	const { selected } = await inquirer.prompt([
 		{
 			type: 'checkbox',
-			name: 'filesToSave',
-			message: chalk.green('Selecione os arquivos que você deseja salvar:'),
-			choices: filesWithCheckbox.map((file) => ({
-				name: chalk.cyan(file.name), // Arquivo com cor
-				value: file,
-				checked: false, // Pode ser alterado se necessário
+			name: 'selected',
+			message: chalk.green('Selecione os arquivos que deseja salvar:'),
+			choices: files.map((f) => ({
+				name: f.name,
+				value: f,
+				checked: true,
 			})),
-			pageSize: 10, // Definindo o número de itens por página
+			pageSize: 10,
 		},
 	]);
 
-	// Pergunta se o usuário quer visualizar o conteúdo
-	if (responses.filesToSave.length === 0) {
-		console.log(chalk.yellow('Nenhum arquivo foi selecionado.'));
-		return [];
+	if (!selected.length) {
+		console.log(chalk.yellow('⚠️  Nenhum arquivo selecionado. Nada foi criado.'));
+		return;
 	}
 
-	// Caso o usuário queira ver o conteúdo dos arquivos
-	const viewContent = await askUser(
-		'Você quer ver o conteúdo dos arquivos selecionados antes de salvar? (s/n): ',
-	);
-	if (viewContent === 's' || viewContent === 'sim') {
-		for (const file of responses.filesToSave) {
-			displayContent(file.content);
+	// Pergunta se quer visualizar o conteúdo
+	const { view } = await inquirer.prompt([
+		{
+			type: 'confirm',
+			name: 'view',
+			message: 'Deseja visualizar o conteúdo antes de salvar?',
+			default: false,
+		},
+	]);
+
+	if (view) {
+		for (const file of selected) {
+			console.log(`\n📄  ${chalk.bold(file.name)}:\n`);
+			console.log(chalk.gray('──────────────────────────────'));
+			console.log(chalk.cyan(file.content.slice(0, 800)));
+			console.log(chalk.gray('\n──────────────────────────────\n'));
+			if (file.content.length > 800) {
+				console.log(chalk.yellow('⚠️  (Conteúdo truncado para visualização)\n'));
+			}
 		}
 	}
 
-	// Retorna os arquivos selecionados para salvar
-	return responses.filesToSave;
+	// Criação dos arquivos
+	const spinner = ora('💾 Salvando arquivos...').start();
+
+	try {
+		for (const file of selected) {
+			await saveFile(file);
+		}
+		spinner.succeed(chalk.greenBright('✅ Todos os arquivos foram salvos com sucesso!\n'));
+	} catch (err) {
+		spinner.fail(chalk.red('❌ Erro ao salvar arquivos.'));
+		console.error(err);
+	}
 }
 
-// Função para criar o arquivo
-async function handleFileCreation(file: {
-	filePath: string;
-	content: string;
-	name: string;
-}) {
-	if (fs.existsSync(file.filePath)) {
-		const answer = await askUser(
-			`🟡 | O arquivo "${file.filePath}" já existe. Deseja sobrescrever? (s/n): `,
-		);
+async function saveFile(file: { filePath: string; content: string; name: string }) {
+	const dir = path.dirname(file.filePath);
 
-		if (answer !== 's' && answer !== 'sim') {
-			console.log(`🚫 | Arquivo ignorado: ${file.filePath}`);
+	if (fs.existsSync(file.filePath)) {
+		const { overwrite } = await inquirer.prompt([
+			{
+				type: 'confirm',
+				name: 'overwrite',
+				message: chalk.yellow(`O arquivo "${file.name}" já existe. Deseja sobrescrever?`),
+				default: false,
+			},
+		]);
+		if (!overwrite) {
+			console.log(chalk.gray(`🚫 Ignorado: ${file.name}`));
 			return;
 		}
 	}
 
-	// Cria os diretórios e escreve o arquivo
-	const dir = path.dirname(file.filePath);
 	fs.mkdirSync(dir, { recursive: true });
 	fs.writeFileSync(file.filePath, file.content, 'utf8');
-	console.log(`✅ | Arquivo salvo com sucesso em: ${file.filePath}`);
+	console.log(chalk.green(`✅ Criado: ${file.name}`));
 }

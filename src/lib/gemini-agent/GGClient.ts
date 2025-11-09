@@ -1,40 +1,37 @@
+// lib/gemini-agent/GGClient.ts
 import { GoogleGenAI, type Content } from '@google/genai';
 import type { GGClientI } from './util/GGClientOptions.js';
 
-class GGClient {
-	private genAI: GoogleGenAI;
-	private modelName: string;
+export class GGClient {
+  private static genAI?: GoogleGenAI;
+  private static modelName = 'gemini-2.0-flash';
+  private static initialized = false;
 
-	constructor(d: GGClientI, modelId: 'gemini-2.0-flash') {
-		this.genAI = new GoogleGenAI({
-			apiKey: d.GOOGLE_API_KEY,
-		});
-		this.modelName = modelId;
-	}
+  private constructor() {} // evita instanciar manualmente
 
-	private async generateTextInternal(prompt: string): Promise<string> {
-		try {
-			const contents: Content[] = [{ role: 'user', parts: [{ text: prompt }] }];
-			const result = await this.genAI.models.generateContent({
-				model: this.modelName,
-				contents,
-			});
+  static init(config: GGClientI, modelId = 'gemini-2.0-flash') {
+    if (GGClient.initialized) return;
 
-			if (!result || typeof result.text !== 'string') {
-				throw new Error('Resposta inválida da API');
-			}
+    GGClient.genAI = new GoogleGenAI({ apiKey: config.GOOGLE_API_KEY });
+    GGClient.modelName = modelId;
+    GGClient.initialized = true;
+  }
 
-			return result.text;
-		} catch (error) {
-			throw new Error(
-				`Failed to generate text: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
-	}
+  static async generate(prompt: string): Promise<string> {
+    if (!GGClient.genAI) {
+      throw new Error('GGClient não foi inicializado. Chame GGClient.init() primeiro.');
+    }
 
-	public async generate(prompt: string): Promise<string> {
-		return this.generateTextInternal(prompt);
-	}
+    const contents: Content[] = [{ role: 'user', parts: [{ text: prompt }] }];
+    const result = await GGClient.genAI.models.generateContent({
+      model: GGClient.modelName,
+      contents,
+    });
+
+    if (!result || typeof result.text !== 'string') {
+      throw new Error('Resposta inválida da API');
+    }
+
+    return result.text;
+  }
 }
-
-export { GGClient };

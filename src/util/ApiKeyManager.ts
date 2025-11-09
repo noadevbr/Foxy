@@ -79,7 +79,7 @@ export class ApiKeyManager {
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
       // Retorna o IV em hex + ':' + texto criptografado
-      return iv.toString('hex') + ':' + encrypted;
+      return `${iv.toString('hex')}:${encrypted}`;
     } catch (error) {
       throw new Error('Erro ao criptografar a API key');
     }
@@ -114,7 +114,7 @@ export class ApiKeyManager {
 
     console.log('\n🦊 | Bem-vindo ao Foxy!');
     console.log('📝 | Para começar, preciso da sua API key do Google Gemini.');
-    console.log('💡 | Você pode obter uma em: https://makersuite.google.com/app/apikey\n');
+    console.log('💡 | Você pode obter uma em: https://aistudio.google.com/api-keys\n');
 
     try {
       const apiKey = await rl.question('🔑 | Cole sua API key do Gemini aqui: ');
@@ -171,7 +171,7 @@ export class ApiKeyManager {
   public deleteApiKey(): void {
     if (existsSync(this.configPath)) {
       try {
-        const fs = require('fs');
+        const fs = require('node:fs');
         fs.unlinkSync(this.configPath);
         console.log('🗑️  | API key removida com sucesso!');
       } catch (error) {

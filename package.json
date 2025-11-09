@@ -18,25 +18,27 @@
 	},
 	"dependencies": {
 		"@google/genai": "^0.9.0",
-		"axios": "^1.9.0",
+		"axios": "^1.13.2",
 		"battery-level": "^3.0.0",
-		"chalk": "^5.4.1",
+		"chalk": "^5.6.2",
 		"commander": "^13.1.0",
-		"inquirer": "^12.5.2",
+		"ignore": "^7.0.5",
+		"inquirer": "^12.11.0",
 		"is-online": "^11.0.0",
-		"zod": "^3.24.3"
+		"ora": "^9.0.0",
+		"zod": "^3.25.76"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@types/battery-level": "^3.0.2",
-		"@types/node": "^22.14.1",
+		"@types/node": "^22.19.0",
 		"pkg": "^5.8.1",
-		"tsc-alias": "^1.8.15",
-		"tsup": "^8.4.0",
-		"tsx": "^4.19.3",
-		"typedoc": "^0.28.3",
-		"typescript": "^5.8.3",
-		"vitest": "^3.1.2"
+		"tsc-alias": "^1.8.16",
+		"tsup": "^8.5.0",
+		"tsx": "^4.20.6",
+		"typedoc": "^0.28.14",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.4"
 	},
 	"license": "ISC"
 }
